@@ -1,0 +1,8334 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Compute Science Blog">
+      
+      
+        <meta name="author" content="LiuZhiqiang(刘志强）">
+      
+      
+        <link rel="canonical" href="https://xliuqq.github.io/csblog/books/data_intensive_system_book/5_replication.html">
+      
+      
+        <link rel="prev" href="part2_distributed_data.html">
+      
+      
+        <link rel="next" href="6_partitions.html">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>复制 - XLiu CS Blog</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="XLiu CS Blog" class="md-header__button md-logo" aria-label="XLiu CS Blog" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            XLiu CS Blog
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              复制
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/xliuqq/csblog" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xliuqq/csblog
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../index.html" class="md-tabs__link">
+          
+  
+    
+  
+  博客
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cloud/index.html" class="md-tabs__link">
+          
+  
+    
+  
+  云原生
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../index.html" class="md-tabs__link">
+          
+  
+    
+  
+  书籍
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../code_guide/design_principle.html" class="md-tabs__link">
+          
+  
+    
+  
+  编程指南
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      
+  
+  
+  
+    
+    
+      
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../languages/java/native/index.html" class="md-tabs__link">
+          
+  
+    
+  
+  编程语言
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../linux/basic.html" class="md-tabs__link">
+          
+  
+    
+  
+  linux
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../web_backend/index.html" class="md-tabs__link">
+          
+  
+    
+  
+  Web后端开发
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cs/cs_basic.html" class="md-tabs__link">
+          
+  
+    
+  
+  CS基础
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../courses/os_lab/index.html" class="md-tabs__link">
+          
+  
+    
+  
+  课程
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../paper/go_concurrency_bugs.html" class="md-tabs__link">
+          
+  
+    
+  
+  论文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="XLiu CS Blog" class="md-nav__button md-logo" aria-label="XLiu CS Blog" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    XLiu CS Blog
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/xliuqq/csblog" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xliuqq/csblog
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    博客
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            博客
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    标签
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_3" id="__nav_1_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    归档
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            归档
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../archive/2024.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    2024
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../archive/2023.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    2023
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_4" id="__nav_1_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    分类
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_4">
+            <span class="md-nav__icon md-icon"></span>
+            分类
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/hdfs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HDFS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/k8s.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    K8s
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/yarn.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Yarn
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/devops.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    devops
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/helm.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    helm
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/maven.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    maven
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/spark.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    spark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../category/%E5%B9%B6%E5%8F%91.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    并发
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../cloud/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    云原生
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            云原生
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../cloud/virtualize/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    虚拟化
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            虚拟化
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/virtualize/lxcfs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    proc虚拟化和共享
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/virtualize/gpu.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    gpu虚拟化
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_2_4" id="__nav_2_2_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    moby(docker)
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            moby(docker)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/virtualize/docker.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    基础
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/virtualize/docker_deploy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    部署配置
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/virtualize/docker_cmds.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    使用
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/virtualize/containerd.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    containerd
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    k8s
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            k8s
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3_1" id="__nav_2_3_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    架构与组件
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            架构与组件
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/k8s.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    概述
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/kubelet.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    kubelet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/k8s_object.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    对象定义
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/k8s_resource.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    内置资源对象
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/pod_inplace_upgrade.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    pod原地升级
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/config.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    常用配置
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/cmds.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    命令使用
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/go_client.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    goclient
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/ui_manager.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    UI和管理
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/log_arch.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    日志架构
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/k8s_security.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    安全机制
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3_11" id="__nav_2_3_11_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    资源调度
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_3_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3_11">
+            <span class="md-nav__icon md-icon"></span>
+            资源调度
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/scheduler.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    调度策略
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/scheduler_plugin.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    调度策略
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3_12" id="__nav_2_3_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    CRD
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_3_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            CRD
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/crd_index.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    概述
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/crd_kubebuilder.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    kubebuilder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/crd_java.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    JavaOperator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/metrics.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    指标监控
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/device_plugin.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    设备插件
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/garbage_collect.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    垃圾回收
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/webhook.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Wehhook
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/network.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    网络模型
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/extend_csi.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    存储模型
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3_19" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3_19" id="__nav_2_3_19_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    安装部署
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_3_19_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3_19">
+            <span class="md-nav__icon md-icon"></span>
+            安装部署
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/deploy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    部署流程
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/deploy_storage.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    存储部署
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/notes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    生产注意事项
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/k8s/release_compare.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    可选发行版
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/helm.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    包管理Helm
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/habor.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    镜像仓库Habor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    无服务化
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            无服务化
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/serverless/serverless.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    概述
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/serverless/knative.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    knative
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/serverless/openfaas.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    openfaas
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    常用镜像
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            常用镜像
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/images/images.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    常用镜像
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/images/web_centos.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    浏览器centos
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/tools.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    镜像工具
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    云边系统
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            云边系统
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/cloud_edge/mqtt.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    mqtt协议
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/cloud_edge/openyurt.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    openyurt
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/cloud_edge/kubeedge.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    kubeedge
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_10" id="__nav_2_10_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    项目
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_10">
+            <span class="md-nav__icon md-icon"></span>
+            项目
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/projects/HAMi.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    vGPU HAMI
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/projects/fluid.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    数据编排Fluid
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/projects/istio.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    流量编排Istio
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud/projects/kubevela.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    应用交付KubeVela
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    书籍
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            书籍
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    数据密集型系统设计
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            数据密集型系统设计
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="1_data_system_basic.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    可靠、可扩展、可维护的应用系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="2_data_model_query_language.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    数据模型和查询语言
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="3_data_store_and_search.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    数据存储与检索
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="4_encoding_and_evolution.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    编码与演化
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="part2_distributed_data.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    第二部分：分布式数据
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    复制
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="5_replication.html" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    复制
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      领导者与追随者
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="领导者与追随者">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      同步复制与异步复制
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      设置新的从库
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      处理节点宕机
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="处理节点宕机">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      从库失效：追赶恢复
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      主库失效：故障切换
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      复制日志的实现
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="复制日志的实现">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      基于语句的复制
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wal" class="md-nav__link">
+    <span class="md-ellipsis">
+      传输预写式日志（WAL）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      逻辑日志复制（基于行）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      基于触发器的复制
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      复制延迟问题
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="复制延迟问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      读己之写
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      单调读
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      一致前缀读
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      复制延迟的解决方案
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      多主复制
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="多主复制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      多主复制的应用场景
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="多主复制的应用场景">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      运维多个数据中心
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      需要离线操作的客户端
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      协同编辑
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      处理写入冲突
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="处理写入冲突">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      同步与异步冲突检测
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      避免冲突
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      收敛至一致的状态
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      自定义冲突解决逻辑
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      自动冲突解决
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_28" class="md-nav__link">
+    <span class="md-ellipsis">
+      什么是冲突？
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      多主复制拓扑
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_30" class="md-nav__link">
+    <span class="md-ellipsis">
+      无主复制
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="无主复制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      当节点故障时写入数据库
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="当节点故障时写入数据库">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_32" class="md-nav__link">
+    <span class="md-ellipsis">
+      读修复和反熵
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      读写的法定人数
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_34" class="md-nav__link">
+    <span class="md-ellipsis">
+      法定人数一致性的局限性
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="法定人数一致性的局限性">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_35" class="md-nav__link">
+    <span class="md-ellipsis">
+      监控陈旧度
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_36" class="md-nav__link">
+    <span class="md-ellipsis">
+      宽松的法定人数与提示移交
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="宽松的法定人数与提示移交">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_37" class="md-nav__link">
+    <span class="md-ellipsis">
+      运维多个数据中心
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_38" class="md-nav__link">
+    <span class="md-ellipsis">
+      检测并发写入
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="检测并发写入">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_39" class="md-nav__link">
+    <span class="md-ellipsis">
+      最后写入胜利（丢弃并发写入）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_40" class="md-nav__link">
+    <span class="md-ellipsis">
+      “此前发生”的关系和并发
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_41" class="md-nav__link">
+    <span class="md-ellipsis">
+      捕获"此前发生"关系
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_42" class="md-nav__link">
+    <span class="md-ellipsis">
+      合并并发写入的值
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_43" class="md-nav__link">
+    <span class="md-ellipsis">
+      版本向量
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_44" class="md-nav__link">
+    <span class="md-ellipsis">
+      参考文献
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="6_partitions.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    分区
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="7_transaction.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    事务
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="8_trouble_in_distributed_system.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    分布式系统的麻烦
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="9_consistency_consensus.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    一致性与共识
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="part3_derived_data.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    第三部分：衍生数据
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="10_batch_processing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    第十章：批处理
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="11_streaming_processing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    第十一章：流处理
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="12_the_future.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    第十二章：数据系统的未来
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    编程指南
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            编程指南
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_principle.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    设计原则
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../code_guide/design_pattern/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    设计模式
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            设计模式
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_2" id="__nav_4_2_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    创建型模式
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            创建型模式
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/factory.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    工厂模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/abstract_factory.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    抽象工厂
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/singleton.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    单例
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/builder.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    构造者模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/prototype.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    原型模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_3" id="__nav_4_2_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    结构型模式
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            结构型模式
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/adapter.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    适配器模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/bridge.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    桥接模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/composite.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    组合模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/decorator.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    装饰模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/facade.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    外观模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/flyweight.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    享元模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/proxy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    代理模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_4" id="__nav_4_2_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    行为型模式
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            行为型模式
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/chain.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    职责链模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/command.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    命令模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/interpret.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    解释器模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/iterator.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    迭代器模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/medium.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    中介者模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/memento.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    备忘录模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/observer.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    观察者模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/state.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    状态模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/strategy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    策略模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/template.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    模板方法
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/visitor.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    访问者模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/design_pattern/container_distributed.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    分布式应用设计模式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/clean_code.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    整洁代码
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../code_guide/algs/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    算法
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            算法
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/algs/hash.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    散列算法
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/algs/bloom_filter.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    布隆过滤器
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    数据结构
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            数据结构
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/data_structure/array.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    数组
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/data_structure/list.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    链表
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/data_structure/queue.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    队列
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/data_structure/hashmap.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Hash表
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code_guide/data_structure/tree.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    树
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    编程语言
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            编程语言
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_1" id="__nav_5_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Java
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1">
+            <span class="md-nav__icon md-icon"></span>
+            Java
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../languages/java/native/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Native
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_1" id="__nav_5_1_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            Native
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_1_1_2" id="__nav_5_1_1_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    JNI
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_5_1_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            JNI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/java/native/jni.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    原理
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/java/native/jni_demo.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    示例
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/java/native/jnr.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    JNR
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    C和C++
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            C和C++
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/basic.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    基础
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/class.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    类
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/concurrency.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    并发
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/debug.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    调试
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/call_python.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CallPython
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/abi.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ABI
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/gcc.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    gcc
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ccpp/make.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    make
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/libffi.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ffi
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/unicode.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    unicode
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../languages/ziju.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    语言自举
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    linux
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            linux
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/basic.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    基础
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/shell_programming.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    shell编程
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/tuning.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    性能调试命令
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/bash.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    bash
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/chmod.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    chmod
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/chroot.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    chroot
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/binutils.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    gnu工具
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/firewall.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    防火墙
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/namespace.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    名空间
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/cgroup.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    cgroup
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/limit_process.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    进程的限制
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/systemctl.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    systemctl
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/log_and_rotate.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    日志管理
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/process_snapshot.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    进程快照
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/acls.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    acls
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/network.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    网络
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/fs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    文件系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/zero_copy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    零拷贝
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../linux/yum.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    源配置
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../web_backend/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Web后端开发
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Web后端开发
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../web_backend/aop_java.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    切面编程(Java)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../web_backend/cache.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    缓存
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    CS基础
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            CS基础
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/cs_basic.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    基础
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/cs_os.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    操作系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_3" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../cs/network/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    网络
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            网络
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/network/network.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    网络层协议
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/network/trans_protocols.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    传输层协议
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/network/http.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HTTP
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/network/intranet_penetration.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    内网穿透
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cs/network/LVS.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    LVS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    课程
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            课程
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../courses/os_lab/index.html" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    操作系统设计与实现(2023)
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9_1" id="__nav_9_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_1">
+            <span class="md-nav__icon md-icon"></span>
+            操作系统设计与实现(2023)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/01-os_introduction.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    1.操作系统概述
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/02-os_appview.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    2.应用视角的操作系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/03-os_hardware_view.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3.硬件视角的操作系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/04-os_python_modeling.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    4.Python 建模操作系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/05_multi_cpu_programming.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    5.多处理器编程：从入门到放弃
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/06_concurrent_control_basic.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    6.应用视角的操作系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/07_concurrent_control_mutex.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    7.并发控制：互斥
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/08_debug_and_action.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    8.调试理论与实践
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/09_sync_condition.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    9.并发控制：同步（条件变量）
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/10_sync_semphore.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    10.并发控制：同步（信号量）
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/11_concurrent_in_real_world.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    11.真实世界的并发编程
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/12_concurrent_bug_category.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    12.并发BUG分类
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/13_concurrent_bug_defense.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    13.并发 Bug 的应对
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/14_multi_cpu_and_interrupt.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    14.多处理器系统与中断机制
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/15_kernel_thread_and_process.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    15.操作系统上的进程
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/16_application_in_linux.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    16.Linux 操作系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/17_hack_linux_process_address.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    17.Linux 进程的地址空间
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/18_os_lab_live_guide.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    18.操作系统实验生存指南
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/19_system_call_and_shell.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    19.系统调用和 UNIX Shell
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/20-c_standard_lib.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    20.C标准库和实现
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/21-22-executable_files_loading.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    21-22.可执行文件与加载
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/23_application_of_state_machine.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    23.状态机模型的应用
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/24_impletation_of_os_process.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    24.操作系统进程的实现
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/25_store_device.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    25.存储设备原理
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/26_input_output_device.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    26.输入输出设备
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/27_device_driver_and_filesystem.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    27.设备驱动程序与文件系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/28_FAT_UNIX_filesystem.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    28.FAT 和 UNIX 文件系统
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/29_available_durable_data.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    29.持久数据的可靠性
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../courses/os_lab/30_summarize.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    30.课程总结
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    论文
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            论文
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/go_concurrency_bugs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    go并发bugs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/job_scheduling_in_hpc.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HPC中的作业调度
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/scalability_but_at_what_cost.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    可扩展性的代价
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      领导者与追随者
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="领导者与追随者">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      同步复制与异步复制
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      设置新的从库
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      处理节点宕机
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="处理节点宕机">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      从库失效：追赶恢复
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      主库失效：故障切换
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      复制日志的实现
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="复制日志的实现">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      基于语句的复制
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wal" class="md-nav__link">
+    <span class="md-ellipsis">
+      传输预写式日志（WAL）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      逻辑日志复制（基于行）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      基于触发器的复制
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      复制延迟问题
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="复制延迟问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      读己之写
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      单调读
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      一致前缀读
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      复制延迟的解决方案
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      多主复制
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="多主复制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      多主复制的应用场景
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="多主复制的应用场景">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      运维多个数据中心
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      需要离线操作的客户端
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      协同编辑
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      处理写入冲突
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="处理写入冲突">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      同步与异步冲突检测
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      避免冲突
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      收敛至一致的状态
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      自定义冲突解决逻辑
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      自动冲突解决
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_28" class="md-nav__link">
+    <span class="md-ellipsis">
+      什么是冲突？
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      多主复制拓扑
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_30" class="md-nav__link">
+    <span class="md-ellipsis">
+      无主复制
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="无主复制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      当节点故障时写入数据库
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="当节点故障时写入数据库">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_32" class="md-nav__link">
+    <span class="md-ellipsis">
+      读修复和反熵
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      读写的法定人数
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_34" class="md-nav__link">
+    <span class="md-ellipsis">
+      法定人数一致性的局限性
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="法定人数一致性的局限性">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_35" class="md-nav__link">
+    <span class="md-ellipsis">
+      监控陈旧度
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_36" class="md-nav__link">
+    <span class="md-ellipsis">
+      宽松的法定人数与提示移交
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="宽松的法定人数与提示移交">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_37" class="md-nav__link">
+    <span class="md-ellipsis">
+      运维多个数据中心
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_38" class="md-nav__link">
+    <span class="md-ellipsis">
+      检测并发写入
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="检测并发写入">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_39" class="md-nav__link">
+    <span class="md-ellipsis">
+      最后写入胜利（丢弃并发写入）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_40" class="md-nav__link">
+    <span class="md-ellipsis">
+      “此前发生”的关系和并发
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_41" class="md-nav__link">
+    <span class="md-ellipsis">
+      捕获"此前发生"关系
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_42" class="md-nav__link">
+    <span class="md-ellipsis">
+      合并并发写入的值
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_43" class="md-nav__link">
+    <span class="md-ellipsis">
+      版本向量
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_44" class="md-nav__link">
+    <span class="md-ellipsis">
+      参考文献
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+<nav class="md-tags" >
+  
+    
+    
+    
+      <a href="../../tags.html#" class="md-tag">数据密集型系统</a>
+    
+  
+</nav>
+
+
+  
+  
+
+
+<h1 id="_1">复制</h1>
+<p>出于各种各样的原因，希望能复制数据：</p>
+<ul>
+<li><strong>延迟</strong>：使得数据与用户在地理上接近 ，如 CDN；</li>
+<li><strong>可用性</strong>：即使系统的一部分出现故障，系统也能继续工作；</li>
+<li><strong>读取吞吐量</strong>：伸缩可以接受读请求的机器数量；</li>
+</ul>
+<p>复制需要仔细考虑并发和所有可能出错的事情，并处理故障（如不可用的节点和网络中断，不包括更隐蔽的故障，如软件错误导致的静默数据损坏）。</p>
+<p>复制的困难之处在于处理复制数据的 <strong>变更（change）</strong>，三种流行的变更复制算法：</p>
+<ul>
+<li><strong>单领导者（single leader，单主）</strong>：客户端将所有写入操作发送到单个节点（主库），读取可以在任何副本上执行（但可能是旧数据）</li>
+<li><strong>多领导者（multi leader，多主）</strong> ：客户端将每个写入发送到几个主库节点之一，主库将数据更改事件流发送给彼此以及任何从库节点。</li>
+<li><strong>无领导者（leaderless，无主）</strong>：客户端将每个写入发送到几个节点，并从多个节点并行读取，以检测和纠正具有陈旧数据的节点。</li>
+</ul>
+<p>复制可以是同步的，也可以是异步的，这在发生故障时对系统行为有深远的影响。</p>
+<ul>
+<li>例如，如果主库失败后你将一个异步更新的从库提升为新的主库，那么最近提交的数据可能会丢失。</li>
+</ul>
+<p>决定应用程序在复制延迟时的行为的一致性模型：</p>
+<ul>
+<li>写后读一致性：用户应该总是能看到自己提交的数据。</li>
+<li>单调读：用户在看到某个时间点的数据后，他们不应该再看到该数据在更早时间点的情况。</li>
+<li>一致前缀读：用户应该看到数据处于一种具有因果意义的状态：例如，按正确的顺序看到一个问题和对应的回答。</li>
+</ul>
+<p>多主复制和无主复制方法所固有的并发问题：因为他们允许多个写入并发发生，这可能会导致冲突。</p>
+<ul>
+<li>一个算法来确定一个操作是否发生在另一个操作之前，或者它们是否并发发生；</li>
+<li>通过合并并发更新来解决冲突的方法；</li>
+</ul>
+<h2 id="_2">领导者与追随者</h2>
+<blockquote>
+<p>存在多个副本时，会不可避免的出现一个问题：如何确保所有数据都落在了所有的副本上？</p>
+</blockquote>
+<p><strong>基于领导者的复制（leader-based replication）</strong> （也称 <strong>主动/被动（active/passive）</strong> 复制或 <strong>主/从（master/slave）</strong> 复制</p>
+<ul>
+<li>其中一个副本被指定为 <strong>领导者（leader）</strong>，也称为 <strong>主库（master|primary）</strong>，其他副本被称为 <strong>追随者（followers）</strong>，亦称为 <strong>只读副本（read replicas）</strong>、<strong>从库（slaves）</strong>、<strong>备库（ secondaries）</strong> 或 <strong>热备（hot-standby）</strong>；       </li>
+</ul>
+<p><strong>写入流程</strong>：仅向领导者写入数据；</p>
+<ul>
+<li>当客户端要向数据库写入时，它必须将请求发送给该 <strong>领导者</strong>；</li>
+<li>当领导者将新数据写入本地存储时，它也会将数据变更发送给所有的追随者，称之为 <strong>复制日志（replication log）</strong> 或 <strong>变更流（change stream）</strong>；</li>
+<li>每个跟随者从领导者拉取日志，并相应更新其本地数据库副本，方法是<strong>按照与领导者相同的处理顺序</strong>来进行所有写入。</li>
+</ul>
+<p>读取流程：向领导者或任一追随者进行查询。</p>
+<p><img alt="基于领导者的（主/从）复制" src="pics/fig5-1.png" /></p>
+<h3 id="_3">同步复制与异步复制</h3>
+<p>同步与异步复制的示例：从库1是同步复制，从库2是异步复制</p>
+<p><img alt="基于领导者的复制：一个同步从库和一个异步从库" src="pics/fig5-2.png" /></p>
+<p>关于真实环境的使用：</p>
+<ul>
+<li>
+<p>将所有从库都设置为同步的是不切实际，一般采用 <strong>半同步（semi-synchronous）</strong><span class="arithmatex">\(^{[1]}\)</span>，一个从库同步，其它从库异步；</p>
+</li>
+<li>
+<p>通常情况下，基于领导者的复制都配置为完全异步；</p>
+</li>
+<li>
+<p>已经确认写入也不能保证是 <strong>持久（Durable）</strong>：未复制给从库的写入在主库失效不可恢复时将会丢失；</p>
+</li>
+</ul>
+<p>对于异步复制系统而言，主库故障时会丢失数据可能是一个严重的问题：</p>
+<ul>
+<li><strong>链式复制（chain replication）</strong><span class="arithmatex">\(^{[2,3]}\)</span>：研究不丢数据但仍能提供良好性能和可用性的复制方法</li>
+</ul>
+<h3 id="_4">设置新的从库</h3>
+<p>有时候需要设置一个新的从库：也许是为了增加副本的数量，或替换失败的节点。如何确保新的从库拥有主库数据的精确副本？</p>
+<ul>
+<li>简单地将数据文件从一个节点复制到另一个节点通常是不够的</li>
+<li>标准的文件复制会<strong>看到数据库的不同部分在不同的时间点的内容</strong>，其结果可能没有任何意义。</li>
+<li>锁定数据库（使其不可用于写入）来使磁盘上的文件保持一致：违背高可用的目标</li>
+</ul>
+<p>标准步骤：</p>
+<ul>
+<li>在<strong>某个时刻获取主库的一致性快照</strong>（如果可能，不必锁定整个数据库），大多数数据库都具有这个功能，因为它是备份必需的</li>
+<li>将快照复制到新的从库节点</li>
+<li>从库连接到主库，并<strong>拉取快照之后发生的所有数据变更</strong>。这要求<strong>快照与主库复制日志中的位置精确关联</strong>。</li>
+<li>PostgreSQL 将其称为 <strong>日志序列号（log sequence number，LSN）</strong>，MySQL 将其称为 <strong>二进制日志坐标（binlog coordinates）</strong></li>
+<li>当从库处理完快照之后积累的数据变更，就说它 <strong>赶上（caught up）</strong> 了主库，现在它可以继续及时处理主库产生的数据变化</li>
+</ul>
+<h3 id="_5">处理节点宕机</h3>
+<p>即使个别节点失效，也能保持整个系统运行，并尽可能控制节点停机带来的影响。</p>
+<h4 id="_6">从库失效：追赶恢复</h4>
+<p>从库可以从日志中知道，在发生故障之前处理的最后一个事务，从库可以连接到主库，并请求在从库断开期间发生的所有数据变更。</p>
+<h4 id="_7">主库失效：故障切换</h4>
+<p><strong>故障切换（failover）</strong>：一个从库需要被提升为新的主库，需要重新配置客户端将它们的写操作发送给新的主库，其他从库需要开始拉取来自新主库的数据变更。</p>
+<p><strong>自动的故障切换</strong>过程通常由以下步骤组成：</p>
+<ul>
+<li><strong>确认主库失效</strong>：没有万无一失的方法来检测出现了什么问题，所以大多数系统只是简单使用 <strong>超时（Timeout）</strong> </li>
+<li><strong>选择一个新的主库</strong>：最佳人选通常是拥有旧主库最新数据副本的从库（以最小化数据损失），这是个共识问题；</li>
+<li><strong>重新配置系统以启用新的主库</strong>：同时确保旧主库（重启后）意识到新主库的存在并成为一个从库</li>
+</ul>
+<p><strong>故障切换过程可能存在的问题</strong>：</p>
+<ul>
+<li><strong>数据冲突/丢失</strong>：异步复制，则新主库可能没有收到老主库宕机前最后的写入操作</li>
+<li>选出新主库后，如果老主库重新加入集群，新主库可能已经收到了与老主库尚未复制的写入相冲突的写入</li>
+<li>最常见的解决方案是简单<strong>丢弃老主库未复制的写入</strong>，这很可能<strong>打破客户对于数据持久性的期望</strong>。</li>
+<li><strong>外部不一致</strong>：如果数据库需要和其他外部存储相协调，那么丢弃写入内容是极其危险的操作</li>
+<li>
+<p>在 GitHub 的一场事故<span class="arithmatex">\(^{[4]}\)</span>中，数据库使用自增主键，新主库计数器落后于老主库，这些主键并且在Redis也使用，导致数据不一致；</p>
+</li>
+<li>
+<p><strong>脑裂（split brain）</strong>：发生某些故障时（见<a href="8_trouble_in_distributed_system.html">第八章</a>）可能会出现两个节点都以为自己是主库的情况</p>
+</li>
+<li>如果两个主库都可以接受写操作，却没有冲突解决机制（请参阅 “<a href="#多主复制">多主复制</a>”），数据会丢失或损坏；</li>
+<li>当检测到两个主库节点同时存在时关闭其中一个节点时（<strong>屏障（fencing）</strong>机制），但粗糙的机制可能最后会导致两个节点都被关闭<span class="arithmatex">\(^{[5]}\)</span>；</li>
+</ul>
+<p>如何配置正确的超时时间：</p>
+<ul>
+<li>超时时间越长意味着恢复时间也越长；</li>
+<li>超时设置太短，又可能会出现不必要的故障切换；</li>
+<li>高负载和网络故障会导致响应超时，<strong>如果系统已经处于高负载或网络问题的困扰之中，那么不必要的故障切换可能会让情况变得更糟糕</strong></li>
+</ul>
+<h3 id="_8">复制日志的实现</h3>
+<p>基于领导者的复制在底层是如何工作的？实践中有好几种不同的复制方式。</p>
+<h4 id="_9">基于语句的复制</h4>
+<p>主库记录下它执行的每个写入请求（<strong>语句</strong>，即 statement）并将<strong>该语句日志发送给从库</strong></p>
+<ul>
+<li><strong>非确定性（nondeterministic）</strong> 的问题：例如 <code>Now()</code> 和 <code>Rand()</code> 函数，触发器/存储过程产生发非确定的副作用等；</li>
+<li><strong>顺序执行</strong>：在每个副本上按照完全相同的顺序执行它们</li>
+</ul>
+<h4 id="wal">传输预写式日志（WAL）</h4>
+<p>通常会将写操作追加到日志中：日志都是包含<strong>所有数据库写入的仅追加字节序列</strong>，可以使用完全相同的日志在另一个节点上构建副本</p>
+<ul>
+<li>对于日志结构存储引擎（请参阅 “<a href="3_data_store_and_search.html#SSTables 和 LSM-Tree">SSTables 和 LSM 树</a>”），日志是主要的存储位置。日志段在后台压缩，并进行垃圾回收。</li>
+<li>对于覆写单个磁盘块的 <a href="3_data_store_and_search.html#B-tree">B 树</a>，每次修改都会先写入 <strong>预写式日志（Write Ahead Log, WAL）</strong>，以便崩溃后索引可以恢复到一个一致的状态</li>
+</ul>
+<p>通过使用这个日志，从库可以构建一个与主库一模一样的数据结构拷贝。</p>
+<ul>
+<li>缺点是日志记录的数据非常底层：WAL 包含哪些磁盘块中的哪些字节发生了更改。</li>
+<li>复制与存储引擎紧密耦合，存储格式的变更的兼容性（升级版本是否需要停机）；</li>
+</ul>
+<h4 id="_10">逻辑日志复制（基于行）</h4>
+<p>对<strong>复制和存储引擎使用不同的日志格式</strong>，这样可以将复制日志从存储引擎的内部实现中解耦出来</p>
+<ul>
+<li>逻辑日志（logical log）：以将其与存储引擎的（物理）数据表示区分开来</li>
+</ul>
+<p>关系数据库的逻辑日志通常是以<strong>行的粒度来描述对数据库表的写入记录</strong>的序列：</p>
+<ul>
+<li>对于插入的行，日志包含所有列的新值；</li>
+<li>对于删除的行，主键唯一标识行，如果没有主键，则记录所有旧列的值；</li>
+<li>对于更新的行，足够的信息来唯一标识被更新的行，以及所有列的新值（或至少所有已更改的列的新值）</li>
+</ul>
+<p><strong>修改多行的事务会生成多条这样的日志记录</strong>，后面跟着一条指明事务已经提交的记录。</p>
+<ul>
+<li>逻辑日志与存储引擎的内部实现是解耦的，系统可以更容易地做到<strong>向后兼容</strong>；</li>
+<li>逻辑日志格式也更容易解析，用于<strong>数据变更捕获（change data capture）</strong>；</li>
+</ul>
+<h4 id="_11">基于触发器的复制</h4>
+<p>到目前为止描述的复制方法是由数据库系统实现的，不涉及任何应用程序代码。</p>
+<p>某些情况下需要更多的灵活性。例如，如果你只想复制数据的一个子集，或者想从一种数据库复制到另一种数据库，或者如果你需要冲突解决逻辑（请参阅 “<a href="#处理写入冲突">处理写入冲突</a>”）：</p>
+<ul>
+<li>触发器有机会将更改记录到一个单独的表中，使用外部程序读取这个表，再加上一些必要的业务逻辑，就可以将数据变更复制到另一个系统去；</li>
+<li>基于触发器的复制通常比其他复制方法具有更高的开销，并且比数据库内置的复制更容易出错，也有很多限制，但是更灵活。</li>
+</ul>
+<h2 id="_12">复制延迟问题</h2>
+<blockquote>
+<p>探讨复制延迟的滞后时间太长引入的不一致性所导致的问题，以及相关的解决方案。</p>
+</blockquote>
+<p>对于读多写少的场景（Web 上的常见模式），通常创建一主多从，将读请求分散到所有的从库，并允许由附近的副本来处理读请求：</p>
+<ul>
+<li><strong>异步复制</strong>：完全同步的配置将是非常不可靠，单个节点异常导致系统无法写入；</li>
+<li><strong>一致性问题</strong>：同时对主库和从库执行相同的查询，可能得到不同的结果，只具备<strong>最终一致性</strong>；</li>
+</ul>
+<p><strong>复制延迟（replication lag）</strong>，即写入主库到反映至从库之间的延迟</p>
+<ul>
+<li>可能仅仅是几分之一秒，在实践中并不显眼</li>
+<li>如果系统在接近极限的情况下运行，或网络中存在问题时，延迟可以轻而易举地超过几秒，甚至达到几分钟</li>
+</ul>
+<h3 id="_13">读己之写</h3>
+<p><strong>用户写入后从旧副本中读取数据：需要写后读 (read-after-write) 的一致性</strong>，也称为 <strong>读己之写一致性（read-your-writes consistency）<span class="arithmatex">\(^{[6]}\)</span></strong></p>
+<ul>
+<li>如果用户重新加载页面，他们<strong>总会看到他们自己提交的任何更新</strong>，但不对其它用户做出承诺；</li>
+</ul>
+<p><img alt="用户写入后从旧副本中读取数据。需要写后读 (read-after-write) 的一致性来防止这种异常" src="pics/fig5-3.png" /></p>
+<p>如何在基于领导者的复制系统中实现写后读一致性？有各种可能的技术：</p>
+<ul>
+<li>对于用户 <strong>可能修改过</strong> 的内容，总是从主库读取：有办法<strong>不通过实际的查询就可以知道用户是否修改了某些东西</strong></li>
+<li><strong>总是从主库读取用户自己的档案</strong>，从库读取其他用户的档案：因为用户个人资料信息通常只能由用户本人编辑，而不能由其他人编辑：</li>
+<li>应用中的大部分内容都可能被用户编辑的场景：上述办法没用，需要使用其它标准</li>
+<li>跟踪上次更新的时间，<strong>在上次更新后的一分钟内，从主库读</strong></li>
+<li>监控从库的复制延迟，防止向任何滞后主库超过一分钟的从库发出查询</li>
+<li>客户端可以记住最近一次写入的时间戳（查询时带上），系统需要确保从库在处理该用户的读取请求时，该时间戳前的变更都已经传播到了本从库中</li>
+<li>当前从库不够新，则可以从另一个从库读取，或者等待从库追赶上来</li>
+<li>
+<p>时间戳可以是逻辑时间戳（表示写入顺序的东西，例如日志序列号）或实际的系统时钟（在这种情况下，时钟同步变得至关重要）</p>
+</li>
+<li>
+<p>副本分布在多个数据中心（在地理上接近用户或者出于可用性目的），有额外的复杂性。</p>
+</li>
+<li>任何需要由主库提供服务的请求都必须路由到包含该主库的数据中心，而不再是就近的数据中心；</li>
+</ul>
+<p>更复杂的情况：同一位用户从多个设备（例如桌面浏览器和移动 APP）请求服务的时候，跨设备的写后读一致性</p>
+<ul>
+<li>如果用户在一个设备上输入了一些信息，然后在另一个设备上查看，则应该看到他们刚输入的信息。</li>
+<li><strong>记住用户上次更新时间戳的方法变得更加困难</strong>：对这些元数据进行中心化的存储，因为一个设备上运行的程序不知道另一个设备上发生了什么；</li>
+<li>如果副本分布在不同的数据中心，很难保证<strong>来自不同设备的连接（宽带和蜂窝数据网络）会路由到同一数据中心</strong></li>
+<li>如果请求需要读主库，可能首先需要把来<strong>自该用户所有设备的请求都路由到同一个数据中心</strong>。</li>
+</ul>
+<h3 id="_14">单调读</h3>
+<p><strong>时光倒流（moving backward in time）</strong>：从异步从库读取时可能发生的异常。</p>
+<ul>
+<li>从不同从库进行多次读取时</li>
+</ul>
+<p><strong>用户首先从新副本读取，然后从旧副本读取。时间看上去回退了。为了防止这种异常，我们需要单调的读取。</strong></p>
+<p><img alt="从不同的从库读取到不同时刻的数据" src="pics/fig5-4.png" /></p>
+<p><strong>单调读（monotonic reads）</strong><span class="arithmatex">\(^{[7]}\)</span>可以保证这种异常不会发生，比 <strong>强一致性（strong consistency）</strong> 弱，但比 <strong>最终一致性（eventual consistency）</strong> 强。</p>
+<ul>
+<li>当读取数据时，可能会看到一个旧值；</li>
+<li>如果已经读取到较新的数据，后续的读取不会得到更旧的数据；</li>
+</ul>
+<p>实现单调读的一种方式是确保<strong>每个用户总是从同一个副本进行读取</strong>（不同的用户可以从不同的副本读取）。</p>
+<ul>
+<li>基于用户 ID 的散列来选择副本，如果该副本出现故障，用户的查询将需要重新路由到另一个副本。</li>
+</ul>
+<h3 id="_15">一致前缀读</h3>
+<p>从不同的从库读数据时可能违反了<strong>因果律</strong>：先读到回复的内容，再读到提问的内容</p>
+<p><strong>如果某些分区的复制速度慢于其他分区，那么观察者可能会在看到问题之前先看到答案。</strong></p>
+<p><img alt="img" src="pics/fig5-5.png" /></p>
+<p><strong>一致前缀读（consistent prefix reads）<span class="arithmatex">\(^{[7]}\)</span></strong>可以防止这种异常</p>
+<ul>
+<li>如果<strong>一系列写入按某个顺序发生，那么任何人读取这些写入时，也会看见它们以同样的顺序出现</strong>。</li>
+</ul>
+<p>这是 <strong>分区（partitioned）</strong> 或 <strong>分片（sharded）</strong> 数据库中的一个特殊问题：某些分布式数据库中<strong>不同的分区独立运行</strong>，因此不存在 <strong>全局的写入顺序</strong></p>
+<ul>
+<li>当用户从数据库中读取数据时，可能<strong>会看到数据库的某些部分处于较旧的状态，而某些则处于较新的状态</strong></li>
+</ul>
+<p>解决方案：</p>
+<ul>
+<li>确保任何因果相关的写入都写入相同的分区，但在一些应用中可能无法高效地完成这种操作。</li>
+<li>通过显式跟踪因果依赖关系的算法，见 <a href="#此前发生”的关系和并发">此前发生” 的关系和并发</a></li>
+</ul>
+<h3 id="_16">复制延迟的解决方案</h3>
+<p>在使用最终一致的系统时，如果复制延迟增加到几分钟甚至几小时，则应该考虑应用程序的行为。</p>
+<ul>
+<li>答案是 “没问题”，那很好</li>
+<li>用户来说是不好的体验，那么设计系统来提供更强的保证（例如 <strong>写后读</strong>）</li>
+</ul>
+<p>应用程序可以提供比底层数据库更强有力的保证，例如通过主库进行某种读取。但<strong>在应用程序代码中处理这些问题是复杂的，容易出错</strong>。</p>
+<p><strong>事务（transaction）</strong> 存在的原因：<strong>数据库通过事务提供强大的保证</strong></p>
+<ul>
+<li>应用程序开发人员不必担心微妙的复制问题，并可以信赖他们的数据库 “做了正确的事情”</li>
+</ul>
+<p>在走向分布式（复制和分区）数据库时，许多系统放弃了事务，声称事务在性能和可用性上的代价太高，并断言在可伸缩系统中最终一致性是不可避免的。</p>
+<ul>
+<li><a href="7_transaction.html">第七章</a> 和 <a href="9_consistency_consensus.html">第九章</a> 回到事务的话题，并将在 <a href="part3_derived_data.html">第三部分</a> 讨论一些替代机制。</li>
+</ul>
+<h2 id="_17">多主复制</h2>
+<p><strong>多领导者配置</strong>（multi-leader configuration，也称多主、多活复制，即 master-master replication 或 active/active replication）</p>
+<ul>
+<li>允许多个节点接受写入：<strong>处理写入的每个节点都必须将该数据变更转发给所有其他节点</strong>。</li>
+<li>每个主库同时是其他主库的从库</li>
+</ul>
+<h3 id="_18">多主复制的应用场景</h3>
+<blockquote>
+<p>在单个数据中心内部使用多个主库的配置没有太大意义，因为其导致的复杂性已经超过了能带来的好处。</p>
+</blockquote>
+<h4 id="_19">运维多个数据中心</h4>
+<p>副本分散在好几个不同的数据中心（可能会用来容忍单个数据中心的故障，或者为了在地理上更接近用户）</p>
+<ul>
+<li>在每个数据中心内使用常规的主从复制</li>
+<li>数据中心之间，每个数据中心的主库都会将其更改复制到其他数据中心的主库中</li>
+</ul>
+<p><strong>跨多个数据中心的多主复制</strong></p>
+<p><img alt="**跨多个数据中心的多主复制**" src="pics/fig5-6.png" /></p>
+<p>比较一下在运维多个数据中心时，单主和多主的适应情况</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>单主</th>
+<th>多主</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>性能</strong></td>
+<td>每个写入都必须穿过互联网，进入主库所在的数据中心。<br />- 增加写入中心，违背设置多个数据中心的初心；</td>
+<td>每个写操作都可以在本地数据中心进行处理，并与其他数据中心异步复制<br />- 数据中心的网络延迟对用户透明，用户感觉性能更好</td>
+</tr>
+<tr>
+<td><strong>容忍数据中心停机</strong></td>
+<td>故障切换必须使另一个数据中心里的从库成为主库</td>
+<td>每个数据中心可以独立于其他数据中心继续运行，并且当发生故障的数据中心恢复上线时，复制会自动赶上</td>
+</tr>
+<tr>
+<td><strong>容忍网络问题</strong></td>
+<td>对数据中心之间的连接问题非常敏感，因为通过这个连接进行的写操作是同步的</td>
+<td>异步复制功能的多主配置通常能<strong>更好地承受网络问题</strong>，临时的网络中断并不会妨碍正在处理的写入。</td>
+</tr>
+</tbody>
+</table>
+<p>多主复制存在的问题：</p>
+<ul>
+<li><strong>写冲突</strong>：两个不同的数据中心可能会同时修改相同的数据，详细见<a href="#处理写入冲突">处理写入冲突</a></li>
+</ul>
+<h4 id="_20">需要离线操作的客户端</h4>
+<p>应用程序在断网之后仍然需要继续工作：如 手机，笔记本电脑和其他设备上的日历应用</p>
+<ul>
+<li><strong>每个设备都有一个充当主库的本地数据库</strong>（它接受写请求）</li>
+<li>在所有设备上的日历副本之间同步时，存在异步的多主复制过程。复制延迟可能是几小时甚至几天，具体取决于何时可以访问互联网</li>
+</ul>
+<p>从历史上各类日历同步功能的破烂实现可以看出，想把<strong>多主复制用好是多么困难</strong>的一件事。</p>
+<p>有一些工具旨在使这种多主配置更容易。例如，CouchDB <span class="arithmatex">\(^{[8]}\)</span>就是为这种操作模式（多主复制）而设计的。</p>
+<h4 id="_21">协同编辑</h4>
+<p>实时协作编辑应用程序允许多个人同时编辑文档，如 Google Docs，飞书文档等：</p>
+<ul>
+<li>算法在 “<a href="#自动冲突解决">自动冲突解决</a>” 中简要讨论</li>
+</ul>
+<p>通常不会将协作式编辑视为数据库复制问题，但它与前面提到的离线编辑用例有许多相似之处</p>
+<ul>
+<li>当一个用户编辑文档时，所做的更改将立即应用到其本地副本（如Web 浏览器），并<strong>异步复制到服务器和编辑同一文档的任何其他用户</strong>。</li>
+</ul>
+<p>如果要保证不会发生编辑冲突：两种方式</p>
+<ul>
+<li>取得文档的锁定：相当于主从复制模型下在主节点上执行事务操作</li>
+<li>更改的单位设置得非常小（例如单次按键），并避免锁定。此时，需要解决冲突<span class="arithmatex">\(^{[9]}\)</span>。</li>
+</ul>
+<h3 id="_22">处理写入冲突</h3>
+<blockquote>
+<p>多主复制的最大问题是可能发生写冲突，这意味着需要解决冲突。</p>
+</blockquote>
+<p><strong>两个主库同时更新同一记录引起的写入冲突</strong></p>
+<ul>
+<li>用户 1 将页面的标题从 A 更改为 B，并且用户 2 同时将标题从 A 更改为 C；</li>
+<li>每个用户的更改已成功应用到其本地主库。但当异步复制时，会发现冲突<span class="arithmatex">\(^{[10]}\)</span>；</li>
+</ul>
+<p><img alt="两个主库同时更新同一记录引起的写入冲突" src="pics/fig5-7.png" /></p>
+<h4 id="_23">同步与异步冲突检测</h4>
+<blockquote>
+<p>如果你想要同步冲突检测，那么你可能不如直接使用单主复制。</p>
+</blockquote>
+<p>在单主数据库中，<strong>第二个写入将被阻塞并等待第一个写入完成</strong>，或者中止第二个写入事务并强制用户重试。</p>
+<p>在多主配置中，两个写入都是成功的，在稍后的某个时间点才能<strong>异步地检测到冲突</strong>。那时<strong>再来要求用户解决冲突可能为时已晚</strong>。</p>
+<p><strong>冲突检测同步</strong>：即等待写入被复制到所有副本，然后再告诉用户写入成功</p>
+<ul>
+<li>失去多主复制的主要优点：允许每个副本独立地接受写入</li>
+</ul>
+<h4 id="_24">避免冲突</h4>
+<p>处理冲突的最简单的策略就是避免它们<span class="arithmatex">\(^{[11]}\)</span>：</p>
+<ul>
+<li>应用程序可以确保<strong>特定记录的所有写入都通过同一个主库</strong>，那么冲突就不会发生</li>
+</ul>
+<p>示例：</p>
+<ul>
+<li>协同编辑时，将文档划分为不同章节部分（跟客户端设备类型无关），每个部分可以路由到同一个数据中心的主库进行处理；</li>
+</ul>
+<p>对于离线操作时的多主冲突问题：离线的客户端上线时的冲突问题</p>
+<ul>
+<li>用户手动解决冲突：先进行合并（类似 git merge），如果有冲突则用户手动解决；</li>
+</ul>
+<p>有时你可能需要更改被指定的主库：某个数据中心出现故障或者用户已经迁移到另一个位置</p>
+<ul>
+<li>此时，冲突避免将失效，你必须处理不同主库同时写入的可能性</li>
+</ul>
+<h4 id="_25">收敛至一致的状态</h4>
+<p>在多主配置中，没有明确的写入顺序，所以最终值应该是什么并不清楚。</p>
+<ul>
+<li>不同的并发的操作顺序，不存在一种比另一种更正确；</li>
+<li>如果每个副本只是按照它看到写入的顺序写入，那么数据库最终将处于不一致的状态；</li>
+</ul>
+<p>但需要保证：<strong>每个复制方案都必须确保数据最终在所有副本中都是相同</strong></p>
+<p>实现冲突合并解决有多种途径：</p>
+<ul>
+<li><strong>最后写入胜利（LWW, last write wins）</strong>：每个写入一个唯一的 ID（如时间戳），挑选最高 ID 的写入作为胜利者，并丢弃其他写入。</li>
+<li>会造成数据丢失，见后面的<a href="#检测并发写入">检测并发写入</a></li>
+<li>以某种方式将这些<strong>值合并</strong>在一起 - 例如，按字母顺序排序，然后连接它们</li>
+<li>用一种可保留所有信息的<strong>显式数据结构来记录冲突</strong>，并编写解决冲突的应用程序代码（也许通过提示用户的方式）。</li>
+</ul>
+<h4 id="_26">自定义冲突解决逻辑</h4>
+<p>解决冲突的最合适的方法可能取决于应用程序，大多数多主复制工具允许使用<strong>应用程序代码编写冲突</strong>解决逻辑。</p>
+<ul>
+<li><strong>写时执行</strong>：数据库系统检测到复制更改日志中存在冲突，就会调用冲突处理程序。后台进程中运行，并且必须快速执行。</li>
+<li><strong>读时执行</strong>：当检测到冲突时，所有冲突写入被存储。下一次读取数据时，会将这些多个版本的数据返回给应用程序。</li>
+<li>应用程序可以提示用户或自动解决冲突，并将结果写回数据库。如 CouchDB 采用该方式。</li>
+</ul>
+<p>冲突解决通常适用于单行记录或单个文档的层面，而不是整个事务<span class="arithmatex">\(^{[12]}\)</span>。</p>
+<ul>
+<li>有一个事务会原子性地进行几次不同的写入（请参阅 <a href="7_transaction.html">第七章</a>），对于冲突解决而言，每个写入仍需分开单独考虑。</li>
+</ul>
+<h4 id="_27">自动冲突解决</h4>
+<p>一些有趣的研究来自动解决由于数据修改引起的冲突：</p>
+<ul>
+<li><strong>无冲突复制数据类型（Conflict-free replicated datatypes，CRDT）</strong><span class="arithmatex">\(^{[9,13]}\)</span>：开源实现 Yjs <span class="arithmatex">\(^{[16]}\)</span></li>
+<li>由多个用户同时编辑的<strong>集合、映射、有序列表、计数器</strong>等一系列数据结构，它们以合理的方式自动解决冲突。</li>
+<li><strong>可合并的持久数据结构（Mergeable persistent data structures）<span class="arithmatex">\(^{[14]}\)</span></strong></li>
+<li>显式跟踪历史记录，类似于 Git 版本控制系统，并使用<strong>三向合并功能</strong>（而 CRDT 使用双向合并）。</li>
+<li><strong>操作转换（operational transformation，OT）</strong>：Google Docs <span class="arithmatex">\(^{[15]}\)</span>等协同编辑应用背后的冲突解决算法</li>
+<li>专为<strong>有序列表的并发编辑</strong>而设计的，例如构成文本文档的字符列表</li>
+</ul>
+<h4 id="_28">什么是冲突？</h4>
+<p>冲突的示例：</p>
+<ul>
+<li>显而易见：两个写操作并发地修改了同一条记录中的同一个字段，并将其设置为两个不同的值</li>
+<li>微妙而难以发现：为同一个房间同时创建两个不同的预订，则可能会发生冲突</li>
+<li>即使应用程序在允许用户进行预订之前先检查会议室的可用性，如果两次预订是由两个不同的主库进行的，则仍然可能会有冲突</li>
+</ul>
+<p>在 <a href="7_transaction.html">第七章</a> 中看到更多的冲突示例，在 <a href="12_the_future.html">第十二章</a> 中我们将讨论用于检测和解决复制系统中冲突的可伸缩方法。</p>
+<h3 id="_29">多主复制拓扑</h3>
+<p><strong>复制拓扑</strong>（replication topology）用来描述写入操作从一个节点传播到另一个节点的通信路径。</p>
+<p><strong>三种可以在多主复制中使用的拓扑示例</strong></p>
+<ul>
+<li>环形拓扑：每个节点从一个节点接受写入，并将这些写入（加上自己的写入）转发给另一节点；</li>
+<li>星型拓扑：一个指定的根节点将写入转发给所有其他节点。星形拓扑可以推广到树；</li>
+<li>全部到全部拓扑：每个主库都将其写入发送给其他所有的主库。</li>
+</ul>
+<p><img alt="三种可以在多主复制中使用的拓扑示例" src="pics/fig5-8.png" /></p>
+<p>在环形和星形拓扑中，写入可能需要在到达所有副本之前通过多个节点：<strong>节点需要转发从其他节点收到的数据更改</strong>；</p>
+<ul>
+<li><strong>防止无限复制循环</strong>：每个节点被赋予一个唯一的标识符，并且在复制日志中，每次写入都会使用其经过的所有节点的标识符进行标记<span class="arithmatex">\(^{[17]}\)</span></li>
+<li>当一个节点收到用自己的标识符标记的数据更改时，该数据更改将被忽略，因为节点知道它已经被处理过。</li>
+</ul>
+<p><strong>环形和星形拓扑的问题：容错性</strong></p>
+<ul>
+<li>如果只有一个节点发生故障，则可能会中断其他节点之间的复制消息流，导致它们无法通信，除非节点被修复；</li>
+<li>拓扑结构可以重新配置为跳过发生故障的节点，但在大多数部署中，这种重新配置必须手动完成；</li>
+</ul>
+<p><strong>全部到全部的拓扑的问题：消息冲突</strong></p>
+<ul>
+<li>一些网络链接可能比其他网络链接更快（例如由于网络拥塞），结果是一些复制消息可能 “超越” 其他复制消息</li>
+</ul>
+<p><strong>使用多主复制时，写入可能会以错误的顺序到达某些副本</strong></p>
+<ul>
+<li>客户端 A 向主库 1 的表中插入一行，客户端 B 在主库 3 上更新该行。然而，主库 2 可以以不同的顺序接收写入</li>
+<li>因果关系的问题：每一次写入时添加一个时间戳是不够（时钟同步问题，需要全局逻辑时间戳），主库 2 就无法正确地对这些事件进行排序</li>
+<li><strong>版本向量（version vectors）</strong>：解决事件排序问题，参阅 “<a href="#检测并发写入">检测并发写入</a>”</li>
+</ul>
+<p><img alt="**使用多主复制时，写入可能会以错误的顺序到达某些副本**" src="pics/fig5-9.png" /></p>
+<h2 id="_30">无主复制</h2>
+<blockquote>
+<p>在关系数据库主导的时代，无主的复制系统的想法几乎被忘却，当亚马逊用于其内部的 Dynamo 系统之后，它再一次成为数据库的一种时尚架构<span class="arithmatex">\(^{[18]}\)</span>。</p>
+<p>无主复制适用于需要<strong>高可用、低延时、且能够容忍偶尔读到陈旧值</strong>的应用场景。</p>
+</blockquote>
+<p>单主复制、多主复制：<strong>客户端向一个主库</strong>发送写请求，数据库系统负责将写入复制到其他副本。</p>
+<ul>
+<li>主库决定写入的顺序，而从库按相同顺序应用主库的写入。</li>
+</ul>
+<p><strong>无主复制</strong>：</p>
+<ul>
+<li><strong>客户端直接将写入发送到几个副本</strong>，或；</li>
+<li>由一个 <strong>协调者（coordinator）</strong> 节点代表客户端进行写入，但<strong>协调者不执行特定的写入顺序</strong>；</li>
+</ul>
+<h3 id="_31">当节点故障时写入数据库</h3>
+<p>在基于领导者的配置中，多副本的数据库中，有一个副本不可用时，如果要继续处理写入，则可能需要执行故障切换（请参阅「<a href="#处理节点宕机">处理节点宕机</a>」）。</p>
+<p>在无主配置中，不存在故障转移：下图示例，假设三个副本中的两个承认写入是足够</p>
+<ul>
+<li><strong>法定写入，法定读取，并在节点中断后读修复</strong></li>
+</ul>
+<p><img alt="**法定写入，法定读取，并在节点中断后读修复**" src="pics/fig5-10.png" /></p>
+<h4 id="_32">读修复和反熵</h4>
+<p>在一个不可用的节点重新联机之后，读其数据，可能会拿到陈旧的数据</p>
+<ul>
+<li><strong>读请求将被并行地发送到多个节点</strong>：<strong>版本号</strong>将被用于确定哪个值是更新的（请参阅 “<a href="#检测并发写入">检测并发写入</a>”）。</li>
+</ul>
+<p>在一个不可用的节点重新联机之后，它如何赶上它错过的写入？</p>
+<ul>
+<li><strong>读修复</strong>：适用于读频繁，客户端并行读取多个节点时，它可以检测到任何陈旧的响应，并将新值写回到该副本；</li>
+<li><strong>反熵过程</strong>：一些数据存储具有后台进程，该进程不断<strong>查找副本之间的数据差异</strong>，并将任何缺少的数据从一个副本复制到另一个副本</li>
+<li>与基于领导者的复制中的复制日志不同，此<strong>反熵过程不会以任何特定的顺序复制写入</strong>，并且在复制数据之前可能会有显著的延迟。</li>
+</ul>
+<p>如果<strong>没有反熵过程，很少被读取的值可能会从某些副本中丢失</strong>，从而降低了持久性。</p>
+<h4 id="_33">读写的法定人数</h4>
+<p>如果有 n 个副本，每个写入必须由 w 个节点确认才能被认为是成功的，并且我们必须至少为每个读取查询 r 个节点。</p>
+<ul>
+<li><span class="arithmatex">\(w+r&gt;n\)</span>：预期在读取时能获得最新的值，因为 <strong>r 个读取中至少有一个节点是最新</strong>的</li>
+<li>常见的选择是使 n 为奇数（通常为 3 或 5）并设置 <span class="arithmatex">\(w=r=(n+1)/2\)</span>（向上取整）</li>
+</ul>
+<blockquote>
+<p>集群中可能有多于 n 个的节点（集群的机器数可能多于副本数目）。但是任何给定的值只能存储在 n 个节点上。这允许对数据集进行<strong>分区</strong>，从而可以支持比单个节点的存储能力更大的数据集。我们将在 <a href="6_partitions.html">第六章</a> 继续讨论分区。</p>
+</blockquote>
+<p>法定人数条件 <span class="arithmatex">\(w+r&gt;n\)</span>允许系统容忍不可用的节点：</p>
+<ul>
+<li>如果 <span class="arithmatex">\(w&lt;n\)</span>，当节点不可用时，仍然可以处理写入；</li>
+<li>如果 <span class="arithmatex">\(r&lt;n\)</span>，当节点不可用时，仍然可以处理读取；</li>
+<li>对于 <span class="arithmatex">\(n=3,w=r=2\)</span>，可以容忍一个不可用的节点；</li>
+</ul>
+<p><strong>如果<span class="arithmatex">\(w+r&gt;n\)</span>，读取 r 个副本，至少有一个副本必然包含了最近的成功写入</strong></p>
+<p><img alt="**如果w+r&gt;n，读取 r 个副本，至少有一个副本必然包含了最近的成功写入**" src="pics/fig5-11.png" /></p>
+<h3 id="_34">法定人数一致性的局限性</h3>
+<p>通常，r 和 w 被选为多数（超过<span class="arithmatex">\(n/2\)</span> ）节点，因为这确保了 <span class="arithmatex">\(w+r&gt;n\)</span>，同时仍然容忍多达<span class="arithmatex">\(n/2\)</span> 个节点故障。</p>
+<p>可以将 w 和 r 设置为较小的数字，以使 <span class="arithmatex">\(w+r \le n\)</span>（即法定条件不满足）</p>
+<ul>
+<li>读取更有可能未包含具有最新值的节点</li>
+<li>允许更低的延迟和更高的可用性</li>
+</ul>
+<p>即使在  <span class="arithmatex">\(w+r&gt;n\)</span>的情况下，也可能存在返回陈旧值的边缘情况：</p>
+<ul>
+<li>如果使用<strong>宽松的法定人数</strong>（见 “<a href="#宽松的法定人数与提示移交">宽松的法定人数与提示移交</a>”），w 个写入和 r 个读取可能落在完全不同的节点上，因此 r 节点和 w 之间不再保证有重叠节点<span class="arithmatex">\(^{[19]}\)</span>；</li>
+<li>如果<strong>两个写入同时发生</strong>，唯一安全的解决方案是合并并发写入（请参阅 “<a href="#处理写入冲突">处理写入冲突</a>”）。如果根据时间戳（最后写入胜利）挑选出一个胜者，则写入可能由于时钟偏差<span class="arithmatex">\(^{[20]}\)</span>而丢失。将在 “<a href="https://github.com/Vonng/ddia/blob/master/ch5.md#检测并发写入">检测并发写入</a>” 继续讨论此话题；</li>
+<li>如果<strong>写操作与读操作同时发生</strong>，写操作可能仅反映在某些副本上。在这种情况下，不确定读取返回的是旧值还是新值；</li>
+<li><strong>整体写入失败</strong>（在小于 w 个副本上写入成功）并没有在写入成功的副本上回滚，后续的读取仍然可能会读取这次失败写入的值<span class="arithmatex">\(^{[21]}\)</span>；</li>
+<li>如果<strong>携带新值的节点发生故障</strong>，需要从其他带有旧值的副本进行恢复，则存储新值的副本数可能会低于 w，从而打破法定人数条件；</li>
+<li>即使一切工作正常，有时也会不幸地出现关于 <strong>时序（timing）</strong> 的边缘情况，我们将在 “<a href="#线性一致性和法定人数">线性一致性和法定人数</a>” 中看到这点</li>
+</ul>
+<p>因为通常得不到 “<a href="https://github.com/Vonng/ddia/blob/master/ch5.md#复制延迟问题">复制延迟问题</a>” 中讨论的那些保证（读己之写，单调读，一致前缀读），前面提到的异常可能会发生在应用程序中。更强有力的保证通常需要 <strong>事务</strong> 或 <strong>共识</strong>。我们将在 <a href="7_transaction.html">第七章</a> 和 <a href="9_consistency_consensus.html">第九章</a> 回到这些话题。</p>
+<h4 id="_35">监控陈旧度</h4>
+<p>从运维的角度来看，<strong>监视你的数据库是否返回最新的结果</strong>是很重要的。</p>
+<ul>
+<li>对于基于领导者的复制，数据库通常会提供<strong>复制延迟的测量值</strong></li>
+<li>通过从主库的当前位置中减去从库的当前位置，你可以测量复制延迟的程度。</li>
+<li>无主复制的系统中，没有固定的写入顺序</li>
+<li>如果数据库只使用读修复（没有反熵过程），那么对于一个值可能会有多陈旧其实是没有限制</li>
+<li>复制陈旧度的研究：根据参数 n、w 和 r 来预测陈旧读取的预期百分比<span class="arithmatex">\(^{[22]}\)</span></li>
+</ul>
+<h3 id="_36">宽松的法定人数与提示移交</h3>
+<p>法定人数（如迄今为止所描述的）并不像它们可能的那样具有容错性，网络中断可以很容易地将客户端从大量的数据库节点上切断。</p>
+<p>在一个大型的集群中（节点数量明显多于 n 个），网络中断期间客户端可能仍能连接到一些数据库节点，但又不足以组成一个特定的法定人数。</p>
+<ul>
+<li>对于所有无法达到 w 或 r 个节点法定人数的请求，是否返回错误是更好的？</li>
+<li>或者我们是否应该接受写入，然后将它们<strong>写入一些可达的节点，但不在这些值通常所存在的 n 个节点上</strong>？</li>
+</ul>
+<p>后者被认为是一个 <strong>宽松的法定人数（sloppy quorum）</strong><span class="arithmatex">\(^{[18]}\)</span>：</p>
+<ul>
+<li>写和读仍然需要 w 和 r 个成功的响应，但这些响应可能来自不在指定的 n 个 “主” 节点中的其它节点</li>
+<li><strong>提示移交（hinted handoff）</strong>：网络中断得到解决，一个节点代表另一个节点临时接受的任何写入都将被发送到适当的 “主” 节点</li>
+</ul>
+<p><strong>宽松的法定人数提高写入可用性</strong>：只要有任何 w 个节点可用，数据库就可以接受写入。</p>
+<ul>
+<li>意味着即使当 <span class="arithmatex">\(w+r&gt;n\)</span> 时，也<strong>不能确保读取到某个键的最新值</strong>，因为最新的值可能已经临时写入了 n 之外的某些节点<span class="arithmatex">\(^{[21]}\)</span>。</li>
+</ul>
+<h4 id="_37">运维多个数据中心</h4>
+<p>无主复制也适用于多数据中心操作，既然它旨在容忍冲突的并发写入、网络中断和延迟尖峰。</p>
+<p>Cassandra 在正常的无主模型中实现了他们的多数据中心支持<span class="arithmatex">\(^{[23]}\)</span>：</p>
+<ul>
+<li>副本的数量 n 包括所有数据中心的节点，配置中指定每个数据中心所拥有的副本的数量</li>
+<li>每个来自客户端的写入都<strong>会发送到所有副本</strong></li>
+<li>客户端通常只等待来自其本地数据中心内的法定节点的确认，不会受到跨数据中心链路延迟和中断的影响</li>
+<li>其他数据中心的高延迟写入通常被配置为异步执行</li>
+</ul>
+<p>Riak 将客户端和数据库节点之间的所有通信保持在一个本地的数据中心，因此 n 描述了一个数据中心内的副本数量。数据库集群之间的跨数据中心复制在后台异步发生，其风格类似于多主复制<span class="arithmatex">\(^{[24]}\)</span>。</p>
+<h3 id="_38">检测并发写入</h3>
+<blockquote>
+<p>Dynamo 风格的数据库允许多个客户端同时写入相同的键（Key），这意味着即使使用严格的法定人数也会发生冲突。在 <strong>读修复</strong> 或 <strong>提示移交</strong> 期间也可能会产生冲突。</p>
+</blockquote>
+<p>由于可变的网络延迟和部分节点的故障，事件可能以不同的顺序到达不同的节点。</p>
+<p>如果每个节点只要接收到来自客户端的写入请求就简单地覆写某个键值，那么节点就会永久地不一致。下图显示了两个客户机 A 和 B 同时写入三节点数据存储中的键 X：</p>
+<ul>
+<li>节点 1 接收来自 A 的写入，但由于暂时中断，未接收到来自 B 的写入。</li>
+<li>节点 2 首先接收来自 A 的写入，然后接收来自 B 的写入。</li>
+<li>节点 3 首先接收来自 B 的写入，然后从 A 写入。</li>
+</ul>
+<p><img alt="**并发写入 Dynamo 风格的数据存储：没有明确定义的顺序**" src="pics/fig5-12.png" /></p>
+<p>为了最终达成一致，副本应该趋于相同的值。在 “<a href="#处理写入冲突">处理写入冲突</a>” 一节中已经简要介绍了一些解决冲突的技术，下面更详细地讨论这个问题。</p>
+<h4 id="_39">最后写入胜利（丢弃并发写入）</h4>
+<p>实现最终收敛的一种方法是声明每个副本只需要存储 <strong>“最近”</strong> 的值，并允许 <strong>“更旧”</strong> 的值被覆盖和抛弃。</p>
+<ul>
+<li>写入是 <strong>并发（concurrent）</strong> 的，那么它们的顺序就是不确定的，即没有自然的排序；</li>
+</ul>
+<p><strong>最后写入胜利（LWW, last write wins）</strong>：Cassandra 唯一支持的冲突解决方法<span class="arithmatex">\(^{[25]}\)</span></p>
+<ul>
+<li>为每个写入附加一个时间戳，然后挑选最大的时间戳作为 <strong>“最近的”</strong>，并丢弃具有较早时间戳的任何写入</li>
+<li>以 <strong>持久性</strong> 为代价：同一个键有多个并发写入，即使它们反馈给客户端的结果都是成功的（因为它们被写入 w 个副本），也只有一个写入将被保留，而其他写入将被默默地丢弃</li>
+<li>LWW 甚至可能会丢弃不是并发的写入，见 “<a href="8_trouble_in_distributed_system.html#有序事件的时间戳">有序事件的时间戳</a>”</li>
+</ul>
+<p>如果数据丢失不可接受，LWW 是解决冲突的一个很烂的选择。</p>
+<p>在数据库中使用 LWW 的唯一安全方法是<strong>确保一个键只写入一次，然后视为不可变</strong>，从而避免对同一个键进行并发更新。</p>
+<ul>
+<li>？？Cassandra 推荐使用的方法是使用 UUID 作为键，从而为每个写操作提供一个唯一的键<span class="arithmatex">\(^{[25]}\)</span>。</li>
+</ul>
+<h4 id="_40">“此前发生”的关系和并发</h4>
+<p>如果操作 B 了解操作 A，或者依赖于 A，或者以某种方式构建于操作 A 之上，则操作 A 在操作 B 之前发生（happens before）。</p>
+<p>并发操作<span class="arithmatex">\(^{[26]}\)</span>：如果两个操作中的任何一个都不在另一个之前发生（即，两个操作都不知道对方）。</p>
+<ul>
+<li>如果一个操作发生在另一个操作之前，则后面的操作应该覆盖前面的操作，但是如果这些<strong>操作是并发的，则存在需要解决的冲突</strong>。</li>
+</ul>
+<blockquote>
+<p><strong>并发性、时间和相对性</strong></p>
+<p>由于分布式系统中的时钟问题，现实中是很难判断两个事件是否是 <strong>同时</strong> 发生的。</p>
+<p>为了定义并发性，确切的时间并不重要：如果两个操作都意识不到对方的存在，就称这两个操作 <strong>并发</strong>，而不管它们实际发生的物理时间。</p>
+<p>在计算机系统中，即使一个操作影响另一个操作，但两个操作也可能是 <strong>并发的</strong>。</p>
+<ul>
+<li>如果网络缓慢或中断，两个操作间可能会出现一段时间间隔，但仍然是并发的，因为网络问题阻止一个操作意识到另一个操作的存在。</li>
+</ul>
+</blockquote>
+<h4 id="_41">捕获"此前发生"关系</h4>
+<p>看一个算法，它可以确定两个操作是否为并发的，还是一个在另一个之前。简单起见，我们从一个只有一个副本的数据库开始。</p>
+<p>下图显示了两个客户端同时向同一购物车添加项目：</p>
+<p><img alt="img" src="pics/fig5-13.png" /></p>
+<p>上图操作之间的数据流如下图所示：箭头表示哪个操作发生在其他操作之前，意味着后面的操作知道或依赖于较早的操作。</p>
+<ul>
+<li>客户端永远不会完全拿到服务器上的最新数据，因为总是有另一个操作同时进行。但是旧版本的值最终会被覆盖，并且不会丢失任何写入。</li>
+</ul>
+<p><img alt="**因果依赖关系图**" src="pics/fig5-14.png" /></p>
+<p>服务器可以只<strong>通过查看版本号来确定两个操作是否是并发</strong>的 —— 它不需要对值本身进行解释（因此该值可以是任何数据结构）。该算法的工作原理如下：</p>
+<ul>
+<li>服务器为每个键维护一个版本号：每次写入该键时都递增版本号，并将新版本号与写入的值一起存储；</li>
+<li>当客户端读取键时，服务器将返回<strong>所有未覆盖的值以及最新的版本号</strong>。<strong>客户端在写入前必须先读取</strong>；</li>
+<li>当客户端写入键时，<strong>必须包含之前读取的版本号</strong>，并且必须<strong>将之前读取的所有值合并在一起</strong>；</li>
+<li>当服务器接收到具有特定版本号的写入时，它可以<strong>覆盖该版本号或更低版本的所有值</strong>（因为它知道它们已经被合并到新的值中），但是它<strong>必须用更高的版本号来保存所有值</strong>（因为这些值与正在进行的其它写入是并发的）；</li>
+</ul>
+<p>当<strong>一个写入包含前一次读取的版本号时</strong>，它会告诉我们的写入是基于之前的哪一种状态：</p>
+<ul>
+<li><strong>在不包含版本号的情况下进行写操作，则与所有其他写操作并发</strong>，因此它不会覆盖任何内容，只会在随后的读取中作为其中一个值返回。</li>
+</ul>
+<h4 id="_42">合并并发写入的值</h4>
+<p>这种算法可以确保没有数据被无声地丢弃，客户端需要做一些额外的工作：<strong>客户端随后必须合并并发写入的值</strong>。</p>
+<ul>
+<li>这些并发值为 <strong>兄弟（siblings）</strong></li>
+</ul>
+<p>合并并发值：</p>
+<ul>
+<li>根据版本号或时间戳（最后写入胜利）来选择一个值，但这意味着丢失数据；</li>
+<li>一种合理的合并值的方法就是做并集，如购物车的例子，但不适用于从购物车中移除东西；</li>
+<li><strong>墓碑（tombstone）</strong>机制：删除标记，表明合并时表明该项目已被移除；</li>
+</ul>
+<p>在应用程序代码中做兄弟合并是复杂且容易出错：</p>
+<ul>
+<li>一些数据结构被设计出来用于自动执行这种合并，如 CRDT<span class="arithmatex">\(^{[13,27,28]}\)</span> 等；</li>
+</ul>
+<h4 id="_43">版本向量</h4>
+<p>上例单副本时使用单个版本号来捕获操作之间的依赖关系，但是当多个副本并发接受写入时，这是不够的：</p>
+<ul>
+<li>除了对每个键，我们还需要对 <strong>每个副本</strong> 使用版本号</li>
+<li>信息指出了要覆盖哪些并发值，以及要保留哪些并发值或兄弟值</li>
+</ul>
+<p>所有副本的版本号集合称为 <strong>版本向量（version vector）</strong><span class="arithmatex">\(^{[29]}\)</span> ：</p>
+<ul>
+<li>当读取值时，<strong>版本向量会从数据库副本发送到客户端</strong>，并且随后写入值时需要将其发送回数据库；</li>
+<li>版本向量允许数据库<strong>区分覆盖写入和并发写入</strong>；</li>
+<li>版本向量结构能够确保<strong>从一个副本读取并随后写回到另一个副本是安全</strong>的</li>
+<li>Riak 2.0 <span class="arithmatex">\(^{[30,31]}\)</span>中使用其变体的 <strong>虚线版本向量（dotted version vector）</strong><span class="arithmatex">\(^{[32]}\)</span></li>
+</ul>
+<blockquote>
+<p><strong>版本向量和向量时钟</strong></p>
+<p>版本向量有时也被称为向量时钟，即使它们不完全相同。其中的差别很微妙 —— 细节请参阅参考资料<span class="arithmatex">\(^{[32,33,34]}\)</span>。简而言之，<strong>在比较副本的状态时，版本向量才是正确的数据结构</strong>。</p>
+</blockquote>
+<h2 id="_44">参考文献</h2>
+<ol>
+<li>Yoshinori Matsunobu: “<a href="http://yoshinorimatsunobu.blogspot.co.uk/2014/04/semi-synchronous-replication-at-facebook.html">Semi-Synchronous Replication at Facebook</a>,” <em>yoshinorimatsunobu.blogspot.co.uk</em>, April 1, 2014.</li>
+<li>Robbert van Renesse and Fred B. Schneider: “<a href="http://static.usenix.org/legacy/events/osdi04/tech/full_papers/renesse/renesse.pdf">Chain Replication for Supporting High Throughput and Availability</a>,” at <em>6th USENIX Symposium on Operating System Design and Implementation</em> (OSDI), December 2004.</li>
+<li>Jeff Terrace and Michael J. Freedman: “<a href="https://www.usenix.org/legacy/event/usenix09/tech/full_papers/terrace/terrace.pdf">Object Storage on CRAQ: High-Throughput Chain Replication for Read-Mostly Workloads</a>,” at <em>USENIX Annual Technical Conference</em> (ATC), June 2009.</li>
+<li>Jesse Newland: “<a href="https://github.com/blog/1261-github-availability-this-week">GitHub Availability This Week</a>,” <em>github.com</em>, September 14, 2012.</li>
+<li>Mark Imbriaco: “<a href="https://github.com/blog/1364-downtime-last-saturday">Downtime Last Saturday</a>,” <em>github.com</em>, December 26, 2012.</li>
+<li>Douglas B. Terry, Alan J. Demers, Karin Petersen, et al.: “<a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.71.2269&amp;rep=rep1&amp;type=pdf">Session Guarantees for Weakly Consistent Replicated Data</a>,” at <em>3rd International Conference on Parallel and Distributed Information Systems</em> (PDIS), September 1994. <a href="http://dx.doi.org/10.1109/PDIS.1994.331722">doi:10.1109/PDIS.1994.331722</a></li>
+<li>Douglas B. Terry: “<a href="http://research.microsoft.com/pubs/157411/ConsistencyAndBaseballReport.pdf">Replicated Data Consistency Explained Through Baseball</a>,” Microsoft Research, Technical Report MSR-TR-2011-137, October 2011.</li>
+<li>J. Chris Anderson, Jan Lehnardt, and Noah Slater: <em>CouchDB: The Definitive Guide</em>. O'Reilly Media, 2010. ISBN: 978-0-596-15589-6</li>
+<li>Martin Kleppmann and Alastair R. Beresford: “<a href="http://arxiv.org/abs/1608.03960">A Conflict-Free Replicated JSON Datatype</a>,” arXiv:1608.03960, August 13, 2016.</li>
+<li>Frazer Clement: “<a href="http://messagepassing.blogspot.co.uk/2011/10/eventual-consistency-detecting.html">Eventual Consistency – Detecting Conflicts</a>,” <em>messagepassing.blogspot.co.uk</em>, October 20, 2011.</li>
+<li>Robert Hodges: “<a href="https://www.percona.com/live/mysql-conference-2013/sessions/state-art-mysql-multi-master-replication">State of the Art for MySQL Multi-Master Replication</a>,” at <em>Percona Live: MySQL Conference &amp; Expo</em>, April 2013.</li>
+<li>Riley Berton: “<a href="http://sdf.org/~riley/blog/2016/01/04/is-bi-directional-replication-bdr-in-postgres-transactional/">Is Bi-Directional Replication (BDR) in Postgres Transactional?</a>,” <em>sdf.org</em>, January 4, 2016.</li>
+<li>Marc Shapiro, Nuno Preguiça, Carlos Baquero, and Marek Zawirski: “<a href="http://hal.inria.fr/inria-00555588/">A Comprehensive Study of Convergent and Commutative Replicated Data Types</a>,” INRIA Research Report no. 7506, January 2011.</li>
+<li>Benjamin Farinier, Thomas Gazagnaire, and Anil Madhavapeddy: “<a href="http://gazagnaire.org/pub/FGM15.pdf">Mergeable Persistent Data Structures</a>,” at <em>26es Journées Francophones des Langages Applicatifs</em> (JFLA), January 2015.</li>
+<li>John Day-Richter: “<a href="http://googledrive.blogspot.com/2010/09/whats-different-about-new-google-docs.html">What’s Different About the New Google Docs: Making Collaboration Fast</a>,” <em>googledrive.blogspot.com</em>, 23 September 2010.</li>
+<li>"<a href="https://github.com/yjs/yjs">yjs/yjs: Shared data types for building collaborative software</a>".</li>
+<li>Lars Hofhansl: “<a href="https://issues.apache.org/jira/browse/HBASE-7709">HBASE-7709: Infinite Loop Possible in Master/Master Replication</a>,” <em>issues.apache.org</em>, January 29, 2013.</li>
+<li>Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, et al.: “<a href="http://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf">Dynamo: Amazon's Highly Available Key-Value Store</a>,” at <em>21st ACM Symposium on Operating Systems Principles</em> (SOSP), October 2007.</li>
+<li>Joseph Blomstedt: “<a href="http://lists.basho.com/pipermail/riak-users_lists.basho.com/2012-January/007157.html">Re: Absolute Consistency</a>,” email to <em>riak-users</em> mailing list, <em>lists.basho.com</em>, January 11, 2012.</li>
+<li>John Daily: “<a href="http://basho.com/clocks-are-bad-or-welcome-to-distributed-systems/">Clocks Are Bad, or, Welcome to the Wonderful World of Distributed Systems</a>,” <em>basho.com</em>, November 12, 2013.</li>
+<li>Joseph Blomstedt: “<a href="https://vimeo.com/51973001">Bringing Consistency to Riak</a>,” at <em>RICON West</em>, October 2012.</li>
+<li>Peter Bailis, Shivaram Venkataraman, Michael J. Franklin, et al.: “<a href="http://www.bailis.org/papers/pbs-cacm2014.pdf">Quantifying Eventual Consistency with PBS</a>,” <em>Communications of the ACM</em>, volume 57, number 8, pages 93–102, August 2014. <a href="http://dx.doi.org/10.1145/2632792">doi:10.1145/2632792</a></li>
+<li>“<a href="http://www.datastax.com/documentation/cassandra/2.0/index.html">Apache Cassandra 2.0 Documentation</a>,” DataStax, Inc., 2014.</li>
+<li>“<a href="http://basho.com/assets/MultiDatacenter_Replication.pdf">Riak Enterprise: Multi-Datacenter Replication</a>.” Technical whitepaper, Basho Technologies, Inc., September 2014.</li>
+<li>Jonathan Ellis: “<a href="http://www.datastax.com/dev/blog/why-cassandra-doesnt-need-vector-clocks">Why Cassandra Doesn't Need Vector Clocks</a>,” <em>datastax.com</em>, September 2, 2013.</li>
+<li>Leslie Lamport: “<a href="http://research.microsoft.com/en-US/um/people/Lamport/pubs/time-clocks.pdf">Time, Clocks, and the Ordering of Events in a Distributed System</a>,” <em>Communications of the ACM</em>, volume 21, number 7, pages 558–565, July 1978. <a href="http://dx.doi.org/10.1145/359545.359563">doi:10.1145/359545.359563</a></li>
+<li>Sam Elliott: “<a href="https://speakerdeck.com/lenary/crdts-an-update-or-just-a-put">CRDTs: An UPDATE (or Maybe Just a PUT)</a>,” at <em>RICON West</em>, October 2013.</li>
+<li>Joel Jacobson: “<a href="http://blog.joeljacobson.com/riak-2-0-data-types/">Riak 2.0: Data Types</a>,” <em>blog.joeljacobson.com</em>, March 23, 2014.</li>
+<li>D. Stott Parker Jr., Gerald J. Popek, Gerard Rudisin, et al.: “<a href="http://zoo.cs.yale.edu/classes/cs426/2013/bib/parker83detection.pdf">Detection of Mutual Inconsistency in Distributed Systems</a>,” <em>IEEE Transactions on Software Engineering</em>, volume 9, number 3, pages 240–247, May 1983. <a href="http://dx.doi.org/10.1109/TSE.1983.236733">doi:10.1109/TSE.1983.236733</a></li>
+<li>Sean Cribbs: “<a href="https://www.youtube.com/watch?v=HHkKPdOi-ZU">A Brief History of Time in Riak</a>,” at <em>RICON</em>, October 2014.</li>
+<li>Russell Brown: “<a href="http://basho.com/posts/technical/vector-clocks-revisited-part-2-dotted-version-vectors/">Vector Clocks Revisited Part 2: Dotted Version Vectors</a>,” <em>basho.com</em>, November 10, 2015.</li>
+<li>Nuno Preguiça, Carlos Baquero, Paulo Sérgio Almeida, et al.: “<a href="http://arxiv.org/pdf/1011.5808v1.pdf">Dotted Version Vectors: Logical Clocks for Optimistic Replication</a>,” arXiv:1011.5808, November 26, 2010.</li>
+<li>Carlos Baquero: “<a href="https://haslab.wordpress.com/2011/07/08/version-vectors-are-not-vector-clocks/">Version Vectors Are Not Vector Clocks</a>,” <em>haslab.wordpress.com</em>, July 8, 2011.</li>
+<li>Reinhard Schwarz and Friedemann Mattern: “<a href="http://dcg.ethz.ch/lectures/hs08/seminar/papers/mattern4.pdf">Detecting Causal Relationships in Distributed Computations: In Search of the Holy Grail</a>,” <em>Distributed Computing</em>, volume 7, number 3, pages 149–174, March 1994. <a href="http://dx.doi.org/10.1007/BF02277859">doi:10.1007/BF02277859</a></li>
+</ol>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="页脚" >
+        
+          
+          <a href="part2_distributed_data.html" class="md-footer__link md-footer__link--prev" aria-label="上一页: 第二部分：分布式数据">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                上一页
+              </span>
+              <div class="md-ellipsis">
+                第二部分：分布式数据
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="6_partitions.html" class="md-footer__link md-footer__link--next" aria-label="下一页: 分区">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                下一页
+              </span>
+              <div class="md-ellipsis">
+                分区
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.footer", "navigation.indexes"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+        <script src="../../.mkdocs/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
